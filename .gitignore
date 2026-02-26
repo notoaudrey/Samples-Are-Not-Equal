@@ -1,0 +1,7 @@
+scripts
+
+# allow only scripts/cdc/pretrain (keep other scripts ignored)
+!scripts/
+!scripts/cdc/
+!scripts/cdc/pretrain/
+!scripts/cdc/pretrain/**
