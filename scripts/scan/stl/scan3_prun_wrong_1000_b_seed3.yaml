@@ -1,0 +1,67 @@
+
+project: "scan_v2"
+#name: "stl-scan3-v2-1"
+name: "stl-scan3-prun-wrong-1000-b-seed3"
+method: "scan"
+method_kwargs:
+  threshold: 0.99
+  apply_class_balancing: True
+pretext:
+  enable: True
+#  dir: ./trained_models/scan/stl10/stl-scan2-f2
+  dir: save/scan/stl10/stl-scan2-prun-wrong-1000-b-seed3
+  ckpt: checkpoint.pth.tar
+backbone:
+  name: "resnet34"
+  nheads: 1
+  nclusters: 10
+data:
+  dataset: stl10
+  train_path: "/nas/datasets" #
+  val_path: "/nas/datasets" #
+  num_workers: 8
+#  split: 'train'
+  split: 'train+test'
+  partial: False #partial_rate:
+optimizer:
+  name: "adam"
+  batch_size: 1000
+  lr: 0.0001
+  kwargs:
+    weight_decay: 0.0001
+scheduler:
+  name: constant
+
+criterion:
+  name: scan
+max_epochs: 200
+
+cluster_eval:
+  plot_freq: 10
+  plot_title: 'SCAN'
+  eval_freq: 1
+
+  select_enable: True
+  select_freq: 5
+  select_conf: 0.99
+augmentation_strong:
+  crop_size: 96
+  normalize:
+    mean: [0.4914, 0.4823, 0.4466]
+    std: [0.247, 0.243, 0.261]
+  num_strong_augs: 4
+  cutout_kwargs:
+    n_holes: 1
+    length: 32
+    random: True
+augmentation_stantard:
+  random_resized_crop:
+    size: 96
+  normalize:
+    mean: [0.4914, 0.4823, 0.4466]
+    std: [0.247, 0.243, 0.261]
+augmentation_val:
+  crop_size: 96
+  normalize:
+    mean: [0.4914, 0.4823, 0.4466]
+    std: [0.247, 0.243, 0.261]

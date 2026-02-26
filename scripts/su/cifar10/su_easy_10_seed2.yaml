@@ -1,0 +1,71 @@
+
+project: "sup_test"
+name: "cifar10-su-easy-10-seed2"
+method: "su"
+
+pretext:
+  enable: True
+  dir: /nas/cjh/solo-learn/trained_models/mocov2plus/kb44zdxw
+  ckpt: mocov2plus-cifar10-2-kb44zdxw-ep=999.ckpt
+
+
+supervised_checkpoint: save/su/cifar10/cifar10-su-easy-10-seed2/checkpoint.pth.tar
+best_checkpoint: save/su/cifar10/cifar10-su-easy-10-seed2/best_model.pth.tar
+supervised_dir: save/su/cifar10/cifar10-su-easy-10-seed2/
+
+scheduler:
+  name: constant
+
+backbone:
+  name: "resnet34"
+  nheads: 1
+  nclusters: 10
+  feat_dim: 128
+max_epochs: 50
+data:
+  dataset: cifar10
+  train_path: "/nas/datasets" #
+  val_path: "/nas/datasets" #
+  num_workers: 8
+  split: 'train+test'
+  partial: False #partial_rate:
+optimizer:
+  name: "adam"
+  batch_size: 256
+  lr: 0.000001
+  kwargs:
+    weight_decay: 0.0001
+criterion:
+  name: cc
+  ins_temp: 0.5
+  clu_temp: 1.0
+cluster_eval:
+  plot_freq: 25
+  plot_title: 'SUP'
+  eval_freq: 1
+
+  select_enable: True
+  select_freq: 5
+  select_conf: 0.99
+
+augmentation_strong:
+  crop_size: 32
+  normalize:
+    mean: [0.4914, 0.4822, 0.4465]
+    std: [0.2023, 0.1994, 0.2010]
+  num_strong_augs: 4
+  cutout_kwargs:
+    n_holes: 1
+    length: 16
+    random: True
+augmentation_stantard:
+  random_resized_crop:
+    size: 32
+  normalize:
+    mean: [0.4914, 0.4822, 0.4465]
+    std: [0.2023, 0.1994, 0.2010]
+augmentation_val:
+  crop_size: 32
+  normalize:
+    mean: [0.4914, 0.4822, 0.4465]
+    std: [0.2023, 0.1994, 0.2010]
