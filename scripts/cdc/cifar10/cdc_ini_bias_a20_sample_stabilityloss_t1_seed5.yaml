@@ -11,13 +11,11 @@ pretext:
   dir: trained_models/mocov2plus/kb44zdxw
   ckpt: mocov2plus-cifar10-2-kb44zdxw-ep=999.ckpt
 
-prun_epoch: -1
+
 alpha: 2.0
 w: 3
 t: 0.1
 k: 10
-
-
 
 backbone:
   name: "resnet34"

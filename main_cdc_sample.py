@@ -29,16 +29,13 @@ from cdc.args import parse_cfg, get_model, get_strong_transformations,\
     get_train_dataset,get_val_dataset, get_optimizer
 from cdc.utils.evaluate_utils import get_predictions, \
     hungarian_evaluate, calibration_evaluate,  hungarian_evaluate_hard
-from cdc.methods.calibrate_train import initialize_weights, train_cali, init_head_with_confident_samples, init_head_with_real_logits_samples, initialize_weights_bias,visualize_bins
+from cdc.methods.calibrate_train import initialize_weights,  initialize_weights_bias
 from cdc.backbones.models import CaliMLP
-from cdc.methods.dyn_train import SampleMasterTracker, train_cali_sample, train_cali_sample_v2, DynamicSampler, train_cali_sample_time, train_cali_sample_speed, train_cali_sample_amp
+from cdc.methods.dyn_train import SampleMasterTracker, train_cali_sample_speed
 
 FLAGS = argparse.ArgumentParser(description='CDC Model')
 FLAGS.add_argument('--config_env', default='scripts/cdc/env.yaml', help='Location of path config file')
 FLAGS.add_argument('--config_exp', default='scripts/cdc/stl/cdc_ini_bias_a20_sample_stabilityloss_t1_seed5.yaml', help='Location of experiments config file')
-
-os.environ["WANDB_API_KEY"] = '2a4485eff00bb9efe7db48f5ca413f10466663b4'
-os.environ["WANDB_MODE"] = "offline"
 
 def main():
     args = FLAGS.parse_args()
@@ -62,9 +59,6 @@ def main():
     print('Standard transforms:', standard_transformations)
     print('Validation transforms:', val_transformations)
     print('Train samples %d - Val samples %d' %(len(train_dataset), len(val_dataset)))
-    
-    prun_epoch = cfg.get('prun_epoch', -1)
-    print('Pruning epoch:', prun_epoch)
     
     # Model
     print('Get model')
@@ -101,16 +95,7 @@ def main():
     # Initialize weights bias
     alpha= cfg.get('alpha', 1.0)
     k = cfg.get('k', 10)
-    target_class=4
     initialize_weights_bias(cfg, model, cali_mlp, features, val_dataloader, alpha=alpha,target_class=target_class) 
-    #visualize_bins(indices_per_bin, train_dataset, target_class=target_class)
-    """ save_path = os.path.join(cfg['cdc_dir'], "indices_per_bin3.pkl")
-    with open(save_path, "wb") as f:
-        pickle.dump(indices_per_bin, f)  # 直接保存整个列表+数组结构
-    print(f"已保存到 {save_path}，数据包含 {len(indices_per_bin)} 个bin的索引") """
-
-    """ with open(os.path.join(cfg['cdc_dir'], "indices_per_bin3.pkl"), "rb") as f:
-        indices_per_bin = pickle.load(f) """
 
     predictions, features = get_predictions(cfg, val_dataloader, model, return_features=True)
     clustering_stats_bias, indices = hungarian_evaluate_hard(cfg, cfg['cdc_dir'], 0, 0,
@@ -160,18 +145,6 @@ def main():
                               delta_thresh=thresh, window=window, shake_thresh=shake, shake_epoch=shake_epoch, s=s)
     
 
-    """ from cdc.data.collate import collate_custom
-    train_dataloader = DataLoader(
-        train_dataset,
-        batch_size=cfg['optimizer']['batch_size'],
-        sampler=DynamicSampler(tracker),   # 🔥 用自定义采样器
-        num_workers=cfg['data']['num_workers'],
-        pin_memory=True,
-        collate_fn=collate_custom,
-        drop_last=True,
-        persistent_workers=True
-    ) """
-
     metrics_log = {"epoch": [], "acc": [], "remove_acc": [], "highconf_acc": [], "highconf_acc_balanced": []}
     epoch_time_list = []
     for epoch in range(start_epoch, cfg['max_epochs']):
@@ -180,7 +153,7 @@ def main():
         print('Train ...')
         #train_cali(cfg, train_dataloader, cali_mlp, model, optimizer_cali, optimizer_clu, epoch, start_epoch)
         epoch_time=train_cali_sample_speed(cfg, train_dataloader, cali_mlp, model, optimizer_cali, optimizer_clu, tracker, stabilityloss=True)
-        #epoch_time=train_cali_sample_v3(cfg, train_dataloader, cali_mlp, model, optimizer_cali, optimizer_clu, tracker, stabilityloss=True)
+        
         epoch_time_list.append(epoch_time)
         print("epoch_time: ", epoch_time)
 

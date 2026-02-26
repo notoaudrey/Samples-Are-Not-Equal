@@ -41,10 +41,7 @@ from cdc.methods.dyn_train import SampleMasterTracker, train_cali_sample_su
 
 FLAGS = argparse.ArgumentParser(description='CDC Model')
 FLAGS.add_argument('--config_env', default='scripts/cdc/env.yaml', help='Location of path config file')
-FLAGS.add_argument('--config_exp', default='scripts/cdc/tiny-imagenet/cdc_res18_a10_t1_seed5.yaml', help='Location of experiments config file')
-
-# os.environ["WANDB_API_KEY"] = '2a4485eff00bb9efe7db48f5ca413f10466663b4'
-# os.environ["WANDB_MODE"] = "offline"
+FLAGS.add_argument('--config_exp', default='scripts/cdc/cifar10/cdc_res18_a10_t1_seed5.yaml', help='Location of experiments config file')
 
 process = psutil.Process(os.getpid())
 
@@ -159,12 +156,12 @@ def main():
     sample_dataloader =  get_val_dataloader(cfg, train_dataset)
     val_dataloader = get_val_dataloader(cfg, val_dataset)
 
-    # sample_number = 50000
-    # indices_k = list(range(sample_number))
-    # train_dataset = torch.utils.data.Subset(train_dataset, indices_k)
-    # val_dataset = torch.utils.data.Subset(val_dataset, indices_k)
-    # train_dataloader = get_train_dataloader(cfg, train_dataset)
-    # val_dataloader = get_val_dataloader(cfg, val_dataset)
+    sample_number = 50000
+    indices_k = list(range(sample_number))
+    train_dataset = torch.utils.data.Subset(train_dataset, indices_k)
+    val_dataset = torch.utils.data.Subset(val_dataset, indices_k)
+    train_dataloader = get_train_dataloader(cfg, train_dataset)
+    val_dataloader = get_val_dataloader(cfg, val_dataset)
     
     print('Strong transforms:', strong_transformations)
     print('Standard transforms:', standard_transformations)
@@ -225,14 +222,6 @@ def main():
     log_path = os.path.join(cfg['cdc_dir'], 'training_log.log')
     log_file = open(log_path, 'a')
     log_file.write(f'CDC-Clu-ini: {clustering_stats}\n')
-    #log_file.write(f'CDC-Clu-ini-bias: {clustering_stats_bias}\n')
-    """ import pickle
-    save_path = os.path.join(cfg['cdc_dir'], "indices_per_bin.pkl")
-    with open(save_path, "wb") as f:
-        pickle.dump(indices_per_bin, f)  # 直接保存整个列表+数组结构
-    print(f"已保存到 {save_path}，数据包含 {len(indices_per_bin)} 个bin的索引")
-    with open(os.path.join(cfg['cdc_dir'], "indices_per_bin.pkl"), "rb") as f:
-        indices_per_bin = pickle.load(f) """
     
     # Checkpoint
     if os.path.exists(cfg['cdc_checkpoint']):
@@ -258,13 +247,9 @@ def main():
     s= cfg.get('s', 0.2)
     tracker = SampleMasterTracker(cfg, num_samples=len(train_dataloader.dataset),
                               delta_thresh=thresh, window=window, shake_thresh=shake, shake_epoch=shake_epoch, s=s)
-
-    # snap("Tracker 初始化后")
-    # ram("Tracker 初始化后")
     
     metrics_log = {"epoch": [], "acc": [], "remove_acc": [], "highconf_acc": [], "highconf_acc_balanced": []}
-    epoch_time_list = []
-    shake_indices = []
+
 
     ini_dataloader = get_train_dataloader(cfg, train_dataset)
 
@@ -278,7 +263,6 @@ def main():
         train_dataloader = get_train_dataloader(cfg, subset)
         print("len(train_dataloader): ", len(train_dataloader.dataset))
 
-        
         start_time =  time.time()
         for step, batch in enumerate(ini_dataloader):
             images = batch['image'].cuda(non_blocking=True)
@@ -301,41 +285,16 @@ def main():
                 losses=stability_loss.tolist()
             )
         
-            # 在 update 后测量一次 Python 内存增量
-            # if step % 50 == 0:      # 每隔50个 step 打印一次，避免太多输出
-            #     snap(f"Epoch {epoch} Step {step} 后 update()")
-
-
-        end_time = time.time()-start_time
-        print("add_time: ", end_time)
         tracker.step()
-
-        # import pdb;pdb.set_trace()
-
-        # snap(f"Epoch {epoch} 调用 step() 后")
-        # ram(f"Epoch {epoch} 总内存")
-
-        # if len(tracker.delta2_history) > 0:
-        #     delta2_arr = tracker.delta2_history[-1]      # shape: [num_samples]
-        #     low_idx = np.argpartition(delta2_arr, 50)[:50]
-        #     high_idx = np.argpartition(-delta2_arr, 50)[:50]
-        #     low_idx = low_idx[np.argsort(delta2_arr[low_idx])]
-        #     high_idx = high_idx[np.argsort(-delta2_arr[high_idx])]
-        #     visualize_indices(low_idx, high_idx, val_dataset)
-
 
         # Train
         print('Train ...')
-        epoch_time=train_cali(cfg, train_dataloader, cali_mlp, model, optimizer_cali, optimizer_clu, epoch, start_epoch)
-        #epoch_time=train_cali_sample_su(cfg, train_dataloader, cali_mlp, model, optimizer_cali, optimizer_clu)
-        epoch_time_list.append(epoch_time)
-        print("epoch_time: ", epoch_time)
-
+        train_cali(cfg, train_dataloader, cali_mlp, model, optimizer_cali, optimizer_clu, epoch, start_epoch)
+        
         # Evaluate
         log_file = open(log_path, 'a')
         log_file.write(f'Epoch {epoch+1} - Validation prediction\n')
         log_file.write(f'Train data removed - {len(tracker.removed)}/{len(train_dataloader)}\n')
-        log_file.write(f'epoch_time - {epoch_time}\n')
 
         if (epoch+1) % 1 == 0:
             print('Make prediction on validation set ...')
@@ -379,8 +338,7 @@ def main():
                         'epoch': epoch + 1},
                        cfg['cdc_best_model'])
             best_acc = clustering_stats['ACC']
-            
-    np.save("shake_delta2_history.npy", np.array(tracker.shake_delta2_history, dtype=object))        
+                    
     
     # Evaluate and save the final model
     print('Evaluate best model at the end')
@@ -405,68 +363,7 @@ def main():
     pd.DataFrame(metrics_log).to_csv(log_path, index=False)
     print(f"Saved metrics log to: {log_path}")
 
-    # import matplotlib.pyplot as plt
-    # plt.figure(figsize=(8, 6))
-    # plt.plot(metrics_log["epoch"], metrics_log["acc"], label="Overall acc", marker="o")
-    # plt.plot(metrics_log["epoch"], metrics_log["remove_acc"], label="Remove acc", marker="x")
-    # # plt.plot(metrics_log["epoch"], metrics_log["highconf_acc"], label="High-conf acc", marker="s")
-    # # plt.plot(metrics_log["epoch"], metrics_log["highconf_acc_balanced"], label="High-conf balanced acc", marker="d")
-
-    # plt.xlabel("Epoch")
-    # plt.ylabel("Accuracy")
-    # plt.title("Accuracy vs Epoch")
-    # plt.legend()
-    # plt.grid(True)
-    # plt.ylim(60, 100)
-    # plt.tight_layout()
-    # plt.savefig(os.path.join(cfg['cdc_dir'], "acc-t.png"))
-
-    plt.figure(figsize=(8, 6))
-
-    plt.plot(
-        metrics_log["epoch"], 
-        metrics_log["acc"], 
-        label="Overall acc", 
-        marker="o"
-    )
-    plt.plot(
-        metrics_log["epoch"], 
-        metrics_log["remove_acc"], 
-        label="Remove acc", 
-        marker="x"
-    )
-    plt.xlabel("Epoch")
-    plt.ylabel("Accuracy")
-    plt.title("Accuracy vs Epoch")
-    plt.legend()
-    plt.grid(True)
-    plt.ylim(60, 100)
-    plt.tight_layout()
-    save_path = os.path.join(cfg['cdc_dir'], "acc-compare.png")
-    plt.savefig(save_path)
-    print(f"Saved plot to: {save_path}")
-    plt.close()
     
-    
-    tracker.plot_delta2_distributions(bins=100, interval=10)
-    tracker.plot_delta2_trend()
-
-    # ====== 训练结束后，展示趋势和均值 ======
-    import matplotlib.pyplot as plt
-    mean_time = np.mean(epoch_time_list)
-    print(f"\n平均每个 epoch 耗时: {mean_time:.2f} 秒")
-
-    plt.figure(figsize=(8,4))
-    plt.plot(range(1, len(epoch_time_list)+1), epoch_time_list, marker='o', label='Epoch Time')
-    plt.axhline(mean_time, color='red', linestyle='--', label=f'Mean = {mean_time:.2f}s')
-    plt.xlabel("Epoch")
-    plt.ylabel("Time (s)")
-    plt.title("Training Time per Epoch")
-    plt.legend()
-    plt.grid(True)
-    plt.savefig(os.path.join(cfg['cdc_dir'], "epoch-time.png"))
-    
-
 if __name__ == "__main__":
     seed = 5
     random.seed(seed)
