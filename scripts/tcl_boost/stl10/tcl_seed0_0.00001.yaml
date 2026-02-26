@@ -1,0 +1,75 @@
+
+project: "tcl"
+name: "stl10-tcl-boost-seed0-0.00001"
+method: "tcl"
+method_kwargs:
+  entropy_weight: 5.0
+pretext:
+  enable: False
+
+tcl_checkpoint: save/stl10/stl10-tcl-boost-seed0-0.00001/checkpoint.pth.tar
+best_checkpoint: save/stl10/stl10-tcl-boost-seed0-0.00001/best_model.pth.tar
+save_plot: save/stl10/stl10-tcl-boost-seed0-0.00001/
+
+backbone:
+  name: "resnet34"
+  nheads: 1
+  nclusters: 10
+  feat_dim: 128
+  temperature: 1
+
+data:
+  dataset: stl10
+  train_path: "/nas/datasets/" 
+  val_path: "/nas/datasets/" 
+  num_workers: 8
+
+  split: 'train'
+
+optimizer:
+  name: "adam"
+  batch_size: 256
+  lr: 0.00001
+  kwargs:
+    weight_decay: 0.0001
+
+scheduler:
+  name: constant
+
+criterion:
+  name: tcl
+  ins_temp: 0.5
+  clu_temp: 1.0
+
+max_epochs: 200
+
+cluster_eval:
+  plot_freq: 10
+  plot_title: 'tcl'
+  eval_freq: 2
+
+  select_enable: True
+  select_freq: 5
+  select_conf: 0.99
+
+augmentation_strong:
+  crop_size: 96
+  normalize:
+    mean: [0.4914, 0.4823, 0.4466]
+    std: [0.247, 0.243, 0.261]
+  num_strong_augs: 4
+  cutout_kwargs:
+    n_holes: 1
+    length: 32
+    random: True
+augmentation_stantard:
+  random_resized_crop:
+    size: 96
+  normalize:
+    mean: [0.4914, 0.4823, 0.4466]
+    std: [0.247, 0.243, 0.261]
+augmentation_val:
+  crop_size: 96
+  normalize:
+    mean: [0.4914, 0.4823, 0.4466]
+    std: [0.247, 0.243, 0.261]

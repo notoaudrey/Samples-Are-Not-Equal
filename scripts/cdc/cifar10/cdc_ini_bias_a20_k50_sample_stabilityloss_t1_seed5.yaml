@@ -1,0 +1,67 @@
+
+project: "cdc"
+name: "cifar10-ini-bias-a20-k50-sample-stabilityloss-t1-seed5"
+method: "cdcv2"
+method_kwargs:
+  per_class_selected_num: 100
+  super_cluster_num: 500
+  w_en: 1.0
+pretext:
+  enable: True
+  dir: trained_models/mocov2plus/kb44zdxw
+  ckpt: mocov2plus-cifar10-2-kb44zdxw-ep=999.ckpt
+
+prun_epoch: -1
+alpha: 2.0
+w: 3
+t: 0.1
+k: 50
+s: 1
+
+backbone:
+  name: "resnet34"
+  nheads: 1
+  nclusters: 10
+  feat_dim: 512
+data:
+  dataset: cifar10
+  train_path: "/sd1/datasets"
+  val_path: "/sd1/datasets"
+  num_workers: 8
+  split: 'train+test'
+optimizer:
+  name: "adam"
+  batch_size: 1000
+  sub_batch_size: 500
+  lr: 0.0001
+  elr: 0.00005
+  kwargs:
+    weight_decay: 0.000
+scheduler:
+  name: constant
+max_epochs: 150
+cluster_eval:
+  plot_freq: 10
+  plot_title: 'CDC'
+  eval_freq: 1
+augmentation_strong:
+  crop_size: 32
+  normalize:
+    mean: [0.4914, 0.4822, 0.4465]
+    std: [0.2023, 0.1994, 0.2010]
+  num_strong_augs: 4
+  cutout_kwargs:
+    n_holes: 1
+    length: 16
+    random: True
+augmentation_stantard:
+  random_resized_crop:
+    size: 32
+  normalize:
+    mean: [0.4914, 0.4822, 0.4465]
+    std: [0.2023, 0.1994, 0.2010]
+augmentation_val:
+  crop_size: 32
+  normalize:
+    mean: [0.4914, 0.4822, 0.4465]
+    std: [0.2023, 0.1994, 0.2010]

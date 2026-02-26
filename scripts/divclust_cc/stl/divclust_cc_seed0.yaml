@@ -1,0 +1,84 @@
+
+project: "divclust_cc_v1"
+name: "stl-divclust_cc-all-seed0"
+method: "divclust_cc"
+method_kwargs:
+  entropy_loss_weight: 1.0
+
+pretext:
+  enable: True
+  dir: /nas/cjh/solo-learn/trained_models/mocov2plus/f66tydvt
+  ckpt: mocov2plus-stl10-all-f66tydvt-ep=999.ckpt
+
+
+divclust_cc_checkpoint: save/divclust_cc/stl10/stl-divclust_cc-all-seed0/checkpoint.pth.tar
+best_checkpoint: save/divclust_cc/stl10/stl-divclust_cc-all-seed0/best_model.pth.tar
+divclust_cc_dir: save/divclust_cc/stl10/stl-divclust_cc-all-seed0/
+
+clusterings: 20
+NMI_target: 0.8
+NMI_interval: 20
+threshold_rate: 0.99
+divclust_mbank_size: 10000
+
+backbone:
+  name: "resnet34"
+  nheads: 1
+  nclusters: 10
+  feat_dim: 128
+
+data:
+  dataset: stl10
+  train_path: "/nas/datasets/" #
+  val_path: "/nas/datasets/" #
+  num_workers: 8
+  split: 'train+test'
+  partial: False 
+
+optimizer:
+  name: "adam"
+  batch_size: 256
+  lr: 0.00005
+  kwargs:
+    weight_decay: 0.0000
+
+scheduler:
+  name: constant
+
+criterion:
+  name: divclust_cc
+  instance_temperature: 0.5
+  cluster_temperature: 1.0
+  
+max_epochs: 200
+
+cluster_eval:
+  plot_freq: 10
+  plot_title: 'divclust_cc'
+  eval_freq: 10
+
+  select_enable: True
+  select_freq: 5
+  select_conf: 0.99
+
+augmentation_strong:
+  crop_size: 96
+  normalize:
+    mean: [0.4914, 0.4823, 0.4466]
+    std: [0.247, 0.243, 0.261]
+  num_strong_augs: 4
+  cutout_kwargs:
+    n_holes: 1
+    length: 32
+    random: True
+augmentation_stantard:
+  random_resized_crop:
+    size: 96
+  normalize:
+    mean: [0.4914, 0.4823, 0.4466]
+    std: [0.247, 0.243, 0.261]
+augmentation_val:
+  crop_size: 96
+  normalize:
+    mean: [0.4914, 0.4823, 0.4466]
+    std: [0.247, 0.243, 0.261]

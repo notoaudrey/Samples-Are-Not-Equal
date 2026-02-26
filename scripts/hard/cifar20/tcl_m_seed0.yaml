@@ -1,0 +1,78 @@
+
+project: "tcl"
+name: "cifar20-mid-seed0"
+method: "tcl"
+method_kwargs:
+  entropy_weight: 5.0
+pretext:
+  enable: True
+  dir: /nas/cjh/solo-learn/trained_models/mocov2plus/k1m25ecy
+  ckpt: mocov2plus-cifar20-all-k1m25ecy-ep=999.ckpt
+
+hard_checkpoint: save/hard/cifar20/cifar20-mid-seed0/checkpoint.pth.tar
+best_checkpoint: save/hard/cifar20/cifar20-mid-seed0/best_model.pth.tar
+hard_dir: save/hard/cifar20/cifar20-mid-seed0/
+
+backbone:
+  name: "resnet34"
+  nheads: 1
+  nclusters: 20
+  feat_dim: 128
+  temperature: 1
+  
+data:
+  dataset: cifar20
+  train_path: "/nas/datasets" #
+  val_path: "/nas/datasets" #
+  num_workers: 8
+
+  split: 'train+test'
+
+optimizer:
+  name: "adam"
+  batch_size: 256
+  lr: 0.00001
+  kwargs:
+    weight_decay: 0.0001
+
+scheduler:
+  name: constant
+
+criterion:
+  name: tcl
+  ins_temp: 0.5
+  clu_temp: 1.0
+max_epochs: 100
+
+cluster_eval:
+  plot_freq: 10
+  plot_title: 'tcl'
+  eval_freq: 1
+
+  select_enable: True
+  select_freq: 5
+  select_conf: 0.99
+
+augmentation_strong:
+  crop_size: 32
+  normalize:
+    mean: [0.5071, 0.4865, 0.4409]
+    std: [0.2673, 0.2564, 0.2762]
+  num_strong_augs: 4
+  cutout_kwargs:
+    n_holes: 1
+    length: 16
+    random: True
+
+augmentation_stantard:
+  random_resized_crop:
+    size: 32
+  normalize:
+    mean: [0.5071, 0.4865, 0.4409]
+    std: [0.2673, 0.2564, 0.2762]
+
+augmentation_val:
+  crop_size: 32
+  normalize:
+    mean: [0.5071, 0.4865, 0.4409]
+    std: [0.2673, 0.2564, 0.2762]

@@ -1,0 +1,76 @@
+
+project: "tcl"
+name: "imagenetdogs-mid-seed0"
+method: "tcl"
+method_kwargs:
+  entropy_weight: 5.0
+pretext:
+  enable: True
+  dir: /nas/cjh/solo-learn/trained_models/mocov2plus/js77a3b3
+  ckpt: mocov2plus-imagenetdogs-2-js77a3b3-ep=999.ckpt
+
+hard_checkpoint: save/hard/imagenetdogs/imagenetdogs-mid-seed0/checkpoint.pth.tar
+best_checkpoint: save/hard/imagenetdogs/imagenetdogs-mid-seed0/best_model.pth.tar
+hard_dir: save/hard/imagenetdogs/imagenetdogs-mid-seed0/
+
+backbone:
+  name: "resnet34"
+  nheads: 1
+  nclusters: 15
+  feat_dim: 512
+  temperature: 1
+  
+data:
+  dataset: imagenetdogs
+  train_path: "/nas/datasets/imagenetdogs" #
+  val_path: "/nas/datasets/imagenetdogs" #
+  num_workers: 8
+
+  split: 'train'
+
+optimizer:
+  name: "adam"
+  batch_size: 256
+  lr: 0.00001
+  kwargs:
+    weight_decay: 0.0001
+
+scheduler:
+  name: constant
+
+criterion:
+  name: tcl
+  ins_temp: 0.5
+  clu_temp: 1.0
+max_epochs: 100
+
+cluster_eval:
+  plot_freq: 10
+  plot_title: 'tcl'
+  eval_freq: 1
+
+  select_enable: True
+  select_freq: 5
+  select_conf: 0.99
+
+augmentation_strong:
+  crop_size: 224
+  normalize:
+    mean: [0.485, 0.456, 0.406]
+    std: [0.229, 0.224, 0.225]
+  num_strong_augs: 4
+  cutout_kwargs:
+    n_holes: 1
+    length: 32
+    random: True
+augmentation_stantard:
+  random_resized_crop:
+    size: 224
+  normalize:
+    mean: [0.485, 0.456, 0.406]
+    std: [0.229, 0.224, 0.225]
+augmentation_val:
+  crop_size: 224
+  normalize:
+    mean: [0.485, 0.456, 0.406]
+    std: [0.229, 0.224, 0.225]
